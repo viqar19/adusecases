@@ -1,0 +1,48 @@
+---
+- name: user management play1 on localhost
+  hosts: localhost
+  connection: local
+
+  vars:
+    var_validhostname: ""
+
+  tasks:
+  - name: read CSV file
+    include_role:
+     name: win_user_modifications
+     tasks_from: read_csv.yml
+    vars:
+      csv_file_name: "create_user_requests.csv"
+      csv_fields: "Number,Priority,Duedate,State,ShortDescription,Assignmentgroup,WhoisthisRequestedFor,EmployeeID,UserID,FirstName,LastName,Password,Description, Jobtitle, Department, Manager"
+
+  - debug:
+       msg: "data from csv file in role file = {{ csvresults }} "
+  - name: Set hostname of AD or Jump Server
+    set_fact:
+          var_validhostname: "ATDOMAIN.dws.ansible.com"
+
+  - debug: 
+       msg: "AD or Jump hostname {{ var_validhostname }}"
+
+- name: user management play2 process the records
+  hosts: "{{ hostvars['localhost']['var_validhostname'] }}"
+  vars:
+     var_output_txt: ""
+  vars_files:
+    - vault-pass.yml
+
+  tasks:
+  - name: Get CSVresults list from previous play
+    set_fact:
+       csvresults: "{{ hostvars['localhost']['csvresults'] }}"
+
+  - name: Call add_user.yml file with each record from csvresults as parameter if user does not exist
+    include_role:
+       name: win_user_modifications
+       tasks_from: create_user.yml
+    vars:
+       list_item: "{{ item }}"
+    with_items: "{{ csvresults }}"
+  - debug:
+       msg: "===User who started it: {{ tower_user_name|default('no user') }}=======For Hostname {{ inventory_hostname }}=========\n {{ var_output_txt }}"
+

@@ -1,0 +1,63 @@
+---
+- name: Extract Information from Servicenow
+  hosts: localhost
+
+  vars_files:
+    - vault-pass.yml
+
+  tasks:
+  - include_vars: external_vars.yml
+
+  - name: call SNOW file
+    include_role:
+     name: win_user_management_role
+     tasks_from: SNOW_connect.yml
+
+  - name: read CSV file
+    include_role:
+     name: win_user_management_role
+     tasks_from: read_csv.yml
+
+  - name: populate lists
+    include_role:
+     name: win_user_management_role
+     tasks_from: populate_lists.yml
+
+- name: Disable Userid on AD
+  hosts: win
+
+  vars_files:
+    - vault-pass.yml
+
+  tasks:
+
+   - set_fact:
+        negative_list: "{{ hostvars['localhost']['negative_list'] }}"
+        positive_list: "{{ hostvars['localhost']['positive_list'] }}"
+        reject_empid_list: []
+
+   - name: Loop over role
+     include_role:
+      name: win_user_management_role
+     vars:
+      list_item: "{{ item }}"
+     with_items: "{{ positive_list }}"
+
+   - name: Loop over role negative list
+     include_role:
+      name: win_user_management_role
+      tasks_from: update_SNOW_record.yml
+     vars:
+      list_item: "{{ item }}"
+      work_notes: "Duedate is not correct"
+     with_items: "{{ negative_list }}"
+
+   - name: Loop over  for rejected employees
+     include_role:
+      name: win_user_management_role
+      tasks_from: update_SNOW_record.yml
+     vars:
+      list_item: "{{ item }}"
+      work_notes: "EmpoyeeID or UserID is incorrect"
+     with_items: "{{ reject_empid_list }}"
+
