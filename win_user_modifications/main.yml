@@ -1,0 +1,12 @@
+---
+# vars file for win_user_modifications
+snow_url: https://ibmwssdemo2.service-now.com/sys_report_template.do?CSV&jvar_report_id=931c49971bd6dc10bb05106a234bcb7d
+snow_instance: "ibmwssdemo2"
+snow_username: harshdeep
+positive_list: []
+negative_list: []
+reject_empid_list: []
+var_emplidsame: false
+var_emplidfromadsame: false
+csv_file_name: "requests.csv" 
+csv_fields: "Number,Priority,Duedate,State,ShortDescription,Assignmentgroup,WhoisthisRequestedFor,EmployeeID,UserID"
