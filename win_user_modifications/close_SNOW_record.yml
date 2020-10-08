@@ -1,0 +1,21 @@
+---
+##when empid is not correct then dont change the state and mention in work note
+##records in negative list - 
+##records in rejected list
+
+  - name: Close the record on servicenow
+    snow_record:
+             username: harshdeep
+             password: "{{ vault_test_snow_password }}"
+             instance: ibmwssdemo2
+             number: "{{ list_item.Number }}"
+             state: present
+             table: task
+             data:
+                 work_notes: "User Groups = {{ adquerygroups.groups }} "
+                 state: 3
+    register: snowrecords
+    delegate_to: localhost
+    when: 
+      - var_emplidsame
+      - var_emplidfromadsame

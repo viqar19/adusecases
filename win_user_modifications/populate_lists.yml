@@ -1,0 +1,40 @@
+###
+  - name: get date from lookup
+    set_fact:
+        lookup_date: "{{ lookup('pipe', 'date +%m-%d-%Y') }}"
+
+  - name: Populate positive list
+    set_fact:
+      positive_list: "{{ positive_list | default([]) | union([item]) }}"
+    with_items: "{{ usersvar.list }}"
+    when:
+      - item.Duedate|length > 0
+      - item.Duedate.split()[0] < "{{ lookup_date }}"
+      - item.Number != "number"
+
+  - debug:
+       msg: "positive to do list = {{ positive_list }}"
+
+  - name: Populate negative list
+    set_fact:
+      negative_list: "{{ negative_list | default([]) | union([item]) }}"
+    with_items: "{{ usersvar.list }}"
+    when:
+      - item.Duedate|length == 0 or (item.Duedate|length > 0 and item.Duedate.split()[0] >= "{{ lookup_date }}")
+      - item.Number != "number"
+
+  - debug:
+       msg: "negative to do list = {{ negative_list }}"
+
+
+  - name: print positive list in a loop
+    debug:
+      msg: "positive list entries ===== {{ item }}"
+    with_items: "{{ positive_list }}"
+
+  - name: print negative list in a loop
+    debug:
+      msg: "negative list entries ===== {{ item.EmployeeID }}"
+    with_items: "{{ negative_list }}"
+###
+

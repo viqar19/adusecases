@@ -1,0 +1,68 @@
+---
+  - debug:
+      msg: "list_item variable ===== {{ list_item }}"
+  - set_fact:
+        var_emp_id: "{{ list_item.EmployeeID }}"
+        var_user_id: "{{ list_item.UserID }}"
+        shelloutput: {'key': 'dummy'}
+        shelloutput1: ""
+        adquerygroups: ""
+        var_emplidsame: false
+        var_emplidfromadsame: false
+
+  - name: print first record of positive list
+    debug:
+       msg: "first record is = {{ positive_list[0]}}"
+
+#  - name: Fetch the AD EmployeeID from the Employee ID
+#    win_shell:
+#       "Get-ADUser -Filter 'EmployeeID -eq {{ var_emp_id }}'|ConvertTo-Json"
+#    register: shelloutput
+
+  - name: Fetch the EmployeeID from the User ID
+    win_shell: Get-ADUser {{ var_user_id }} -properties * | Select Description|ConvertTo-Json
+    register: shelloutput1
+    ignore_errors: true
+
+  - debug:
+       msg: "shelloutput =  {{ shelloutput }} and Shelloutput1 = {{ shelloutput1 }}"
+
+  - set_fact:
+        var_shelloutput1list: "{{ shelloutput1.stdout|from_json }}"
+    when: 
+      - shelloutput1.stdout| length > 0
+
+  - set_fact:
+        var_emplidsame: true
+        var_newdescription: "{{ var_shelloutput1list.Description + 'Disabled Id as per '+ list_item.Number }}"
+    when:
+      - shelloutput1.stdout| length > 0
+ 
+  - name: Fetch the groups from the Employee ID
+    win_domain_user:
+      name: "{{ var_user_id }}"
+      state: query
+    register: adquerygroups
+    when:
+      - var_emplidsame
+  - debug:
+       msg: "Ad query{{ adquerygroups }}"
+
+  - name: Disable Userid
+    win_domain_user:
+      name: "{{ var_user_id }}"
+      description: "{{ var_newdescritpion }}"
+      enabled: yes
+      state: present
+    register: disableresult
+    when:
+      - var_emplidsame
+  - debug:
+       msg: "Disable Result====== {{ disableresult }}"
+
+  - name: Populate Reject Employee id list
+    set_fact:
+      reject_empid_list: "{{ reject_empid_list | default([]) | union([list_item]) }}"
+    when:
+      - not var_emplidsame 
+

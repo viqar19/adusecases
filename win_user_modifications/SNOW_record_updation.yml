@@ -1,0 +1,22 @@
+---
+##when empid is not correct then dont change the state and mention in work note
+##records in negative list - 
+##records in rejected list
+
+  - name: Update the record on servicenow
+    snow_record:
+             username: "{{ snow_username }}"
+             password: "{{ vault_test_snow_password }}"
+             instance: "{{ snow_instance }}"
+             number: "{{ list_item.Number }}"
+             state: present
+             table: task
+             data:
+                 work_notes: " {{ work_notes }} "
+                 state: "{{ record_state | default(omit) }} " 
+    register: snowrecords
+    delegate_to: localhost
+
+
+  - debug:
+      msg: " snow record status = {{ snowrecords }}"

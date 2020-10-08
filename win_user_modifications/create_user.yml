@@ -1,0 +1,67 @@
+---   
+  - name: Check if Lastname.Firstname already exists
+    win_shell: Get-ADUser '{{ list_item.LastName }}.{{ list_item.FirstName }}' -properties * | Select Name|ConvertTo-Json
+    register: shelloutput
+    ignore_errors: true
+  - debug:
+       msg: "Fetch details command {{ shelloutput.stderr|default('User doesnt exist') }} "
+  - set_fact:
+        var_useridexists: "{{ (shelloutput.stderr == '')|ternary(true,false) }}"
+        var_useridfromad: "{{ shelloutput.stdout|default('[]') }}"
+  - debug:
+       msg: "user id exists: {{ var_useridexists }}"
+    when:
+       - shelloutput.stdout is defined and shelloutput.stdout !=""
+
+  - name: Add a new user
+    win_domain_user:
+      name: "{{ list_item.FirstName }}.{{ list_item.LastName }}"
+      firstname: "{{ list_item.FirstName }}"
+      surname: "{{ list_item.LastName }}"
+      password: "{{ list_item.Password }}"
+      groups: "{{ list_item.Assignmentgroup|default(omit,true) }}"
+      password_expired: yes
+      email: "{{ list_item.FirstName +'.'+ list_item.LastName +'\\@'+'motiva.com' }}"
+      description:  "{{ list_item.Description|default(omit,true) }}"
+      company: "Motiva Enterprises LLC"
+      
+      state: present
+      domain_username: dws.ansible.com\administrator
+      domain_password: "{{ vault_domain_password }}"
+      attributes:
+         EmployeeID: "{{ list_item.EmployeeID|default(omit,true) }}"
+         Title: "{{ list_item.JobTitle|default(omit,true) }}"
+         Department:  "{{ list_item.Department|default(omit,true) }}"
+         Manager: "{{ list_item.Manager |default(omit,true) }}"
+         employeeType: "{{ list_item.employeeType |default(omit,true)}}"
+         extensionAttribute1: "{{ list_item.hiredate |default(omit,true)}}"
+         extensionAttribute3: "{{ list_item.CostCenter|default(omit,true) }}"
+         extensionAttribute4: "{{ list_item.EmploymentStatus|default(omit,true) }}"
+         mailNickname: "{{ list_item.mailnickname|default(omit,true) }}"
+    ignore_errors: true
+    register: useradresult
+    when:
+      - not var_useridexists
+
+  - set_fact:
+       positive_list: "{{ positive_list | default([]) | union([list_item]) }}"
+       var_output_txt: "{{ var_output_txt+ list_item.values()|join(',') +', '+ 'User added successfully' + '\n' }}"
+    when:
+       - not var_useridexists and useradresult is defined and useradresult.changed == true
+       - useradresult.stderr is not defined or (useradresult.stderr is defined and useradresult.stderr|length == 0)
+
+  - set_fact:
+       group_not_exist: "{{ group_not_exist | default([]) | union([list_item]) }}"
+       var_output_txt: "{{ var_output_txt+ list_item.values()|join(',') +', '+ 'User not created Error:' + user_add_result.msg +'\n' }}"
+    when:
+       - not var_useridexists  and useradresult.msg is defined and useradresult.changed == false
+
+  - set_fact:
+         created_but_error_list: "{{ created_but_error_list | default([]) | union([list_item]) }}"
+         var_output_txt: "{{ var_output_txt+ list_item.values()|join(',') +', '+ 'User created but errors -- ' +  user_add_result.stderr  + '\n' }}"
+    when:
+         - not var_useridexists and useradresult.stderr is defined and user_add_result.stderr|length > 0  and useradresult.changed == true
+  - set_fact:
+       var_output_txt: "{{ var_output_txt+ list_item.values()|join(',') +', '+ 'User already exists:' +  var_useridfromad.values()|join(',') +'\n' }}"
+    when:
+       - var_useridexists

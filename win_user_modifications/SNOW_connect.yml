@@ -1,0 +1,14 @@
+---
+  - name: connect to SNOW and create requests.csv
+    uri:
+         url: "{{ snow_url }}"
+         user: "{{ snow_username }}"
+         password: "{{ vault_snow_password }}"
+         timeout: 300
+         dest: "{{ csv_file_name }}"
+    register: snowrecords
+    delegate_to: localhost
+    failed_when: snowrecords.status != 200
+  - debug:
+            msg: " {{ snowrecords.status }} "
+

@@ -1,0 +1,15 @@
+---   
+
+  - name: Deleteuser
+    win_domain_user:
+      name: "{{ list_item.FirstName }}.{{ list_item.LastName }}"
+      state: absent
+      domain_username: dws.ansible.com\administrator
+      domain_password: "{{ vault_domain_password }}"
+      attributes:
+         EmployeeID: "{{ list_item.EmployeeID }}"
+    ignore_errors: true
+    register: useradresult
+
+  - debug:
+       msg: "{{ useradresult }}"
